@@ -1,0 +1,1 @@
+mvn clean compile exec:java -Dexec.mainClass="com.sample.transcribestreamin.s3event.TranscribeS3FilesOnEventListenerMain"

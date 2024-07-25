@@ -25,6 +25,7 @@ import software.amazon.awssdk.services.transcribestreaming.model.StartStreamTran
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -72,9 +73,14 @@ public class TranscribeStreamingTwoFilesMain implements CommandLineRunner, Appli
 
     @Override
     public void run(String... args) throws Exception {
-        LOG.info("EXECUTING : command line runner");
-        final String FILE2 = "src/test/resources/speech_ai.wav";
-        final String FILE1 = "src/test/resources/speech_nature.wav";
+        LOG.info("EXECUTING : command line runner"+ Arrays.asList(args));
+        String FILE2 = "src/test/resources/speech_ai.wav";
+        String FILE1 = "src/test/resources/speech_nature.wav";
+        if(args.length != 0){
+            FILE1=args[0];
+            FILE2=args[1];
+        }
+
 
         InputStream streamOne = TranscribeHelper.getStreamFromFile(FILE1);
         InputStream streamTwo = TranscribeHelper.getStreamFromFile(FILE2);
@@ -123,6 +129,8 @@ public class TranscribeStreamingTwoFilesMain implements CommandLineRunner, Appli
         };
         CompletableFuture<Void> result = streamTranscriber.transcribe(streamReader);
         result.get();
+        LOG.info("DONE");
+        System.exit(0);
 
     }
 

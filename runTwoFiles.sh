@@ -1,0 +1,1 @@
+mvn clean compile exec:java -Dexec.mainClass="com.sample.transcribestreamin.multichannel.TranscribeStreamingTwoFilesMain" -Dexec.args="$1 $2"
