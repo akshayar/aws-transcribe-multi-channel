@@ -35,24 +35,24 @@ import java.util.concurrent.ExecutorService;
  * This is an example Subscription implementation that converts bytes read from an AudioStream into AudioEvents
  * that can be sent to the Transcribe service. It implements a simple demand system that will read chunks of bytes
  * from an input stream containing audio data
- *
+ * <p>
  * To read more about how Subscriptions and reactive streams work, please see
  * https://github.com/reactive-streams/reactive-streams-jvm/blob/v1.0.2/README.md
  */
 public class ByteToAudioEventSubscription implements Subscription {
     private static final Logger LOG = LoggerFactory.getLogger(ByteToAudioEventSubscription.class);
     private final int chunkSizeInBytes;
-    private final ExecutorService executor ;
+    private final ExecutorService executor;
     private final Subscriber<? super AudioStream> subscriber;
     private final StreamReader streamReader;
 
 
     public ByteToAudioEventSubscription(Subscriber<? super AudioStream> s, ExecutorService executor, int chunkSizeInBytes, StreamReader streamReader) {
-        LOG.info("Creating ByteToAudioEventSubscription :{}",streamReader.label());
+        LOG.info("Creating ByteToAudioEventSubscription :{}", streamReader.label());
         this.subscriber = s;
-        this.executor=executor;
-        this.chunkSizeInBytes=chunkSizeInBytes;
-        this.streamReader=streamReader;
+        this.executor = executor;
+        this.chunkSizeInBytes = chunkSizeInBytes;
+        this.streamReader = streamReader;
     }
 
     @Override
@@ -62,27 +62,27 @@ public class ByteToAudioEventSubscription implements Subscription {
         }
 
         //We need to invoke this in a separate thread because the call to subscriber.onNext(...) is recursive
-        try{
-            executor.submit(()-> this.sendNEvents(n));
-        }catch (Exception e){
-            LOG.error("Exception while submitting task to executor :{}",streamReader.label(),e);
+        try {
+            executor.submit(() -> this.sendNEvents(n));
+        } catch (Exception e) {
+            LOG.error("Exception while submitting task to executor :{}", streamReader.label(), e);
         }
 
     }
 
     private synchronized void sendNEvents(long n) {
-        for(long index=0 ; index < n ; index++){
+        for (long index = 0; index < n; index++) {
             try {
-                    ByteBuffer audioBuffer = getNextEvent();
-                    if (audioBuffer.remaining() > 0) {
-                        AudioEvent audioEvent = audioEventFromBuffer(audioBuffer);
-                        subscriber.onNext(audioEvent);
-                    } else {
-                        subscriber.onComplete();
-                        break;
-                    }
+                ByteBuffer audioBuffer = getNextEvent();
+                if (audioBuffer.remaining() > 0) {
+                    AudioEvent audioEvent = audioEventFromBuffer(audioBuffer);
+                    subscriber.onNext(audioEvent);
+                } else {
+                    subscriber.onComplete();
+                    break;
+                }
             } catch (Exception e) {
-                LOG.error("Exception while reading and sending event:{}",streamReader.label(),e);
+                LOG.error("Exception while reading and sending event:{}", streamReader.label(), e);
                 subscriber.onError(e);
             }
 
@@ -124,7 +124,7 @@ public class ByteToAudioEventSubscription implements Subscription {
 
         StartStreamTranscriptionRequest getTranscriptionRequest();
 
-        void close() ;
+        void close();
 
         String label();
 

@@ -23,16 +23,17 @@ public class StreamTranscriber implements ApplicationContextAware {
     }
 
     public AudioStreamPublisher getAudioStreamPublisher(ByteToAudioEventSubscription.StreamReader streamReader) throws IOException {
-        AudioStreamPublisher publisherTwoChannels= applicationContext.getBean(AudioStreamPublisher.class);
+        AudioStreamPublisher publisherTwoChannels = applicationContext.getBean(AudioStreamPublisher.class);
         publisherTwoChannels.setStreamReader(streamReader);
         return publisherTwoChannels;
         //return new AudioStreamPublisherTwoChannels(streamReader);
     }
+
     public CompletableFuture<Void> transcribe(ByteToAudioEventSubscription.StreamReader streamReader) throws ExecutionException, InterruptedException, IOException {
         // Implementation for transcribing audio streams
-        AudioStreamPublisher publisherTwoChannels=getAudioStreamPublisher(streamReader);
+        AudioStreamPublisher publisherTwoChannels = getAudioStreamPublisher(streamReader);
 
-        return   transcribeStreamingRetryClient.startStreamTranscription(
+        return transcribeStreamingRetryClient.startStreamTranscription(
                 streamReader.getTranscriptionRequest(),
                 publisherTwoChannels,
                 new StreamTranscriptionBehaviorImpl(streamReader.label()));

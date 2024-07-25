@@ -41,20 +41,20 @@ import java.util.concurrent.ExecutorService;
 public class AudioStreamPublisher implements Publisher<AudioStream> {
     private static final Logger LOG = LoggerFactory.getLogger(AudioStreamPublisher.class);
     @Value("${chunkSizeInBytes:1024}")
-    private int chunkSizeInBytes = 1024;
+    private final int chunkSizeInBytes = 1024;
     @Autowired
     @Qualifier("transcriptionExecutorService")
-    private ExecutorService executor ;
+    private ExecutorService executor;
     private ByteToAudioEventSubscription.StreamReader streamReader;
 
-    public AudioStreamPublisher(){
+    public AudioStreamPublisher() {
         LOG.info("Creating publisher");
     }
 
     @Override
     public void subscribe(Subscriber<? super AudioStream> s) {
-        LOG.info("Subscribing :{},{}",streamReader.label(),s);
-        Subscription subscription=new ByteToAudioEventSubscription(s,executor,chunkSizeInBytes, streamReader);
+        LOG.info("Subscribing :{},{}", streamReader.label(), s);
+        Subscription subscription = new ByteToAudioEventSubscription(s, executor, chunkSizeInBytes, streamReader);
         s.onSubscribe(subscription);
     }
 

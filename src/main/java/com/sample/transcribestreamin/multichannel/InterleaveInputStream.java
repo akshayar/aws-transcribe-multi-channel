@@ -5,9 +5,9 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public class InterleaveInputStream extends InputStream {
+    private static final int BLOCK_SIZE = 2; // Assuming 2 bytes per sample
     private final InputStream agentStream;
     private final InputStream callerStream;
-    private static final int BLOCK_SIZE = 2; // Assuming 2 bytes per sample
 
     public InterleaveInputStream(InputStream agentStream, InputStream callerStream) {
         this.agentStream = agentStream;
@@ -31,15 +31,16 @@ public class InterleaveInputStream extends InputStream {
 
 
     private int read(InputStream stream, byte[] buffer) throws IOException {
-        if(stream!=null){
+        if (stream != null) {
             return stream.read(buffer);
-        }else {
+        } else {
             return -1;
         }
     }
+
     private int read(byte[] agentBuffer, byte[] callerBuffer) throws IOException {
-        int agentBytesRead = read(agentStream,agentBuffer);
-        int callerBytesRead = read(callerStream,callerBuffer);
+        int agentBytesRead = read(agentStream, agentBuffer);
+        int callerBytesRead = read(callerStream, callerBuffer);
 
         if (agentBytesRead == -1 && callerBytesRead == -1) {
             return -1; // End of both streams
@@ -63,15 +64,15 @@ public class InterleaveInputStream extends InputStream {
 
     @Override
     public void close() throws IOException {
-        if(agentStream!=null) agentStream.close();
-        if(callerStream!=null) callerStream.close();
+        if (agentStream != null) agentStream.close();
+        if (callerStream != null) callerStream.close();
     }
 
     public static class FixedSizeByteArrayOutputStream extends ByteArrayOutputStream {
         private final int maxSize;
 
         public FixedSizeByteArrayOutputStream(byte[] byteArr) {
-            this.buf=byteArr;
+            this.buf = byteArr;
             this.maxSize = byteArr.length;
         }
 

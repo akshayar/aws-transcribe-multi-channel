@@ -29,7 +29,6 @@ import software.amazon.awssdk.services.transcribestreaming.model.BadRequestExcep
 import software.amazon.awssdk.services.transcribestreaming.model.StartStreamTranscriptionRequest;
 import software.amazon.awssdk.services.transcribestreaming.model.StartStreamTranscriptionResponseHandler;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -45,21 +44,21 @@ public class TranscribeStreamingRetryClient {
 
     private static final int DEFAULT_MAX_RETRIES = 10;
     private static final int DEFAULT_MAX_SLEEP_TIME_MILLS = 100;
+    List<Class<?>> nonRetriableExceptions = List.of(BadRequestException.class);
     @Value("${maxRetries:10}")
     private int maxRetries = DEFAULT_MAX_RETRIES;
     @Value("${sleepTime:100}")
     private int sleepTime = DEFAULT_MAX_SLEEP_TIME_MILLS;
-
     @Autowired
     private TranscribeStreamingAsyncClient client;
-    List<Class<?>> nonRetriableExceptions = Arrays.asList(BadRequestException.class);
 
-    public TranscribeStreamingRetryClient(){
+    public TranscribeStreamingRetryClient() {
 
     }
 
     /**
      * Initiate TranscribeStreamingRetryClient with TranscribeStreamingAsyncClient
+     *
      * @param client TranscribeStreamingAsyncClient
      */
     public TranscribeStreamingRetryClient(TranscribeStreamingAsyncClient client) {
@@ -68,6 +67,7 @@ public class TranscribeStreamingRetryClient {
 
     /**
      * Get Max retries
+     *
      * @return Max retries
      */
     public int getMaxRetries() {
@@ -76,7 +76,8 @@ public class TranscribeStreamingRetryClient {
 
     /**
      * Set Max retries
-     * @param  maxRetries Max retries
+     *
+     * @param maxRetries Max retries
      */
     public void setMaxRetries(int maxRetries) {
         this.maxRetries = maxRetries;
@@ -84,6 +85,7 @@ public class TranscribeStreamingRetryClient {
 
     /**
      * Get sleep time
+     *
      * @return sleep time between retries
      */
     public int getSleepTime() {
@@ -92,6 +94,7 @@ public class TranscribeStreamingRetryClient {
 
     /**
      * Set sleep time between retries
+     *
      * @param sleepTime sleep time
      */
     public void setSleepTime(int sleepTime) {
@@ -100,8 +103,9 @@ public class TranscribeStreamingRetryClient {
 
     /**
      * Initiate a Stream Transcription with retry.
-     * @param request StartStreamTranscriptionRequest to use to start transcription
-     * @param publisher The source audio stream as Publisher
+     *
+     * @param request         StartStreamTranscriptionRequest to use to start transcription
+     * @param publisher       The source audio stream as Publisher
      * @param responseHandler StreamTranscriptionBehavior object that defines how the response needs to be handled.
      * @return Completable future to handle stream response.
      */
@@ -119,11 +123,12 @@ public class TranscribeStreamingRetryClient {
 
     /**
      * Recursively call startStreamTranscription() to be called till the request is completed or till we run out of retries.
-     * @param request StartStreamTranscriptionRequest
-     * @param publisher The source audio stream as Publisher
+     *
+     * @param request         StartStreamTranscriptionRequest
+     * @param publisher       The source audio stream as Publisher
      * @param responseHandler StreamTranscriptionBehavior object that defines how the response needs to be handled.
-     * @param finalFuture final future to finish on completing the chained futures.
-     * @param retryAttempt Current attempt number
+     * @param finalFuture     final future to finish on completing the chained futures.
+     * @param retryAttempt    Current attempt number
      */
     private void recursiveStartStream(final StartStreamTranscriptionRequest request,
                                       final Publisher<AudioStream> publisher,
@@ -131,12 +136,12 @@ public class TranscribeStreamingRetryClient {
                                       final CompletableFuture<Void> finalFuture,
                                       final int retryAttempt) {
         CompletableFuture<Void> result = client.startStreamTranscription(request, publisher,
-                                                                         getResponseHandler(responseHandler));
+                getResponseHandler(responseHandler));
         result.whenComplete((r, e) -> {
             if (e != null) {
 
                 if (retryAttempt <= maxRetries && isExceptionRetriable(e)) {
-                    LOG.info("Retry attempt:" + (retryAttempt+1) );
+                    LOG.info("Retry attempt:" + (retryAttempt + 1));
 
                     try {
                         Thread.sleep(sleepTime);
@@ -154,6 +159,7 @@ public class TranscribeStreamingRetryClient {
             }
         });
     }
+
     private StartStreamTranscriptionRequest rebuildRequestWithSession(StartStreamTranscriptionRequest request) {
         return request.toBuilder()
                 .sessionId(UUID.randomUUID().toString())
@@ -184,16 +190,15 @@ public class TranscribeStreamingRetryClient {
 
     /**
      * Check if the exception is retriable or not.
+     *
      * @param e Exception that occurred
      * @return True if the exception is retriable
      */
     private boolean isExceptionRetriable(Throwable e) {
         e.printStackTrace();
-        if (nonRetriableExceptions.contains(e.getClass())) {
-            return false;
-        }
-        return true;
+        return !nonRetriableExceptions.contains(e.getClass());
     }
+
     public void close() {
         this.client.close();
     }

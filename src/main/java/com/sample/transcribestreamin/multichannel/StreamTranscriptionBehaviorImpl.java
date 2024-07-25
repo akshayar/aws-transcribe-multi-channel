@@ -21,13 +21,15 @@ public class StreamTranscriptionBehaviorImpl implements StreamTranscriptionBehav
     public StreamTranscriptionBehaviorImpl(String label) {
         this.label = label;
     }
-    private String addLabel(String in){
-        return "<<"+label+">>  : "+in;
+
+    private String addLabel(String in) {
+        return "<<" + label + ">>  : " + in;
     }
 
-    private void print(String str){
+    private void print(String str) {
         LOG.info(addLabel(str));
     }
+
     @Override
     public void onError(Throwable e) {
         print("=== Failure encountered ===");
@@ -35,30 +37,31 @@ public class StreamTranscriptionBehaviorImpl implements StreamTranscriptionBehav
     }
 
     @Override
-    public void onStream(TranscriptResultStream e){
+    public void onStream(TranscriptResultStream e) {
         onStreamWithChannel(e);
     }
-    private void onStreamWithChannel(TranscriptResultStream e){
+
+    private void onStreamWithChannel(TranscriptResultStream e) {
         List<Result> results = ((TranscriptEvent) e).transcript().results();
-        Map<String,List<Alternative>> partialTranscript = results.stream().filter(Result::isPartial)
-                .collect(Collectors.toMap(Result::channelId,Result::alternatives));
+        Map<String, List<Alternative>> partialTranscript = results.stream().filter(Result::isPartial)
+                .collect(Collectors.toMap(Result::channelId, Result::alternatives));
 
-        Map<String,List<Alternative>>  nonPartialTranscript = results.stream().filter(r -> !r.isPartial())
-                .collect(Collectors.toMap(Result::channelId,Result::alternatives));
+        Map<String, List<Alternative>> nonPartialTranscript = results.stream().filter(r -> !r.isPartial())
+                .collect(Collectors.toMap(Result::channelId, Result::alternatives));
 
-        nonPartialTranscript.forEach((channel,alternatives)->{
+        nonPartialTranscript.forEach((channel, alternatives) -> {
             alternatives.stream().forEach(a -> {
-                if(!a.transcript().isEmpty()){
+                if (!a.transcript().isEmpty()) {
 //                    System.out.println();
 //                    System.out.println("<<"+channel+">>  : "+ a.transcript());
-                    print("<<"+channel+">>  : "+ getSpeakerLabels(a.items().stream()));
+                    print("<<" + channel + ">>  : " + getSpeakerLabels(a.items().stream()));
                     finalResult.append(" ").append(a.transcript());
                 }
             });
         });
     }
 
-    public String getSpeakerLabels(Stream<Item> stream){
+    public String getSpeakerLabels(Stream<Item> stream) {
         return String.valueOf(stream.collect(Collectors.groupingBy(
                 this::speaker,
                 Collectors.mapping(
@@ -67,8 +70,9 @@ public class StreamTranscriptionBehaviorImpl implements StreamTranscriptionBehav
                 )
         )));
     }
-    public  String speaker(Item item){
-        return "speaker_"+item.speaker();
+
+    public String speaker(Item item) {
+        return "speaker_" + item.speaker();
     }
 
 

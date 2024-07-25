@@ -3,8 +3,6 @@
 
 package com.sample.transcribestreamin.multichannel;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,19 +15,17 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Scope;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.transcribestreaming.TranscribeStreamingAsyncClient;
 import software.amazon.awssdk.services.transcribestreaming.model.LanguageCode;
 import software.amazon.awssdk.services.transcribestreaming.model.MediaEncoding;
 import software.amazon.awssdk.services.transcribestreaming.model.StartStreamTranscriptionRequest;
 
-import javax.sound.sampled.LineUnavailableException;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -39,14 +35,20 @@ public class TranscribeStreamingTwoFilesMain implements CommandLineRunner, Appli
     private static final Logger LOG = LoggerFactory.getLogger(TranscribeStreamingTwoFilesMain.class);
     @Value("${region}")
     private static final Region region = Region.AP_SOUTH_1;
-    @Autowired
-    private StreamTranscriber streamTranscriber;
-
     @Value("${file.stream.sampleRate}")
     private static final int sample_rate = 28800;
+    @Autowired
+    private StreamTranscriber streamTranscriber;
+    private ApplicationContext applicationContext;
+
+    public static void main(String[] args) {
+        LOG.info("STARTING THE APPLICATION");
+        SpringApplication.run(TranscribeStreamingTwoFilesMain.class, args);
+        LOG.info("APPLICATION FINISHED");
+    }
 
     @Bean
-    public TranscribeStreamingAsyncClient getStreamingClient(){
+    public TranscribeStreamingAsyncClient getStreamingClient() {
         return TranscribeStreamingAsyncClient.builder()
                 .region(region)
                 .build();
@@ -54,41 +56,38 @@ public class TranscribeStreamingTwoFilesMain implements CommandLineRunner, Appli
 
     @Bean(name = "transcriptionExecutorService")
     @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-    public ExecutorService getExecutorService(){
+    public ExecutorService getExecutorService() {
         return Executors.newSingleThreadExecutor();
     }
 
     @Bean
-    public AWSCredentialsProvider credentialsProvider(){
-        return DefaultAWSCredentialsProviderChain.getInstance();
+    public AwsCredentialsProvider credentialsProvider() {
+        return DefaultCredentialsProvider.builder().build();
     }
-
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
     }
-    private ApplicationContext applicationContext;
-
-
 
     @Override
     public void run(String... args) throws Exception {
         LOG.info("EXECUTING : command line runner");
-        final String FILE2 =  "src/test/resources/speech_ai.wav";
+        final String FILE2 = "src/test/resources/speech_ai.wav";
         final String FILE1 = "src/test/resources/speech_nature.wav";
 
-        InputStream streamOne=TranscribeHelper.getStreamFromFile(FILE1);
-        InputStream streamTwo=TranscribeHelper.getStreamFromFile(FILE2);
+        InputStream streamOne = TranscribeHelper.getStreamFromFile(FILE1);
+        InputStream streamTwo = TranscribeHelper.getStreamFromFile(FILE2);
 
-        ByteToAudioEventSubscription.StreamReader streamReader=new ByteToAudioEventSubscription.StreamReader() {
-            final InterleaveInputStream stream=new InterleaveInputStream(streamOne,streamTwo);
-            boolean stopped=false;
+        ByteToAudioEventSubscription.StreamReader streamReader = new ByteToAudioEventSubscription.StreamReader() {
+            final InterleaveInputStream stream = new InterleaveInputStream(streamOne, streamTwo);
+            boolean stopped = false;
+
             @Override
             public int read(byte[] b) throws IOException {
-                if(!stopped){
+                if (!stopped) {
                     return stream.read(b);
-                }else{
+                } else {
                     return -1;
                 }
 
@@ -108,27 +107,23 @@ public class TranscribeStreamingTwoFilesMain implements CommandLineRunner, Appli
 
             @Override
             public void close() {
-                try{
-                    stopped=true;
+                try {
+                    stopped = true;
                     stream.close();
-                }catch (Exception e){e.printStackTrace();}
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
+
             @Override
-            public String label(){
+            public String label() {
                 return "twoFile";
             }
 
         };
-        CompletableFuture<Void> result= streamTranscriber.transcribe(streamReader);
+        CompletableFuture<Void> result = streamTranscriber.transcribe(streamReader);
         result.get();
 
-    }
-
-
-    public static void main(String[] args)  {
-        LOG.info("STARTING THE APPLICATION");
-        SpringApplication.run(TranscribeStreamingTwoFilesMain.class, args);
-        LOG.info("APPLICATION FINISHED");
     }
 
 }
