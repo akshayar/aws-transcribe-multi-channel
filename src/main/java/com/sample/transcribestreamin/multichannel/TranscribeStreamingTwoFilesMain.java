@@ -1,0 +1,138 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+package com.sample.transcribestreamin.multichannel;
+
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Scope;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.transcribestreaming.TranscribeStreamingAsyncClient;
+import software.amazon.awssdk.services.transcribestreaming.model.LanguageCode;
+import software.amazon.awssdk.services.transcribestreaming.model.MediaEncoding;
+import software.amazon.awssdk.services.transcribestreaming.model.StartStreamTranscriptionRequest;
+
+import javax.sound.sampled.LineUnavailableException;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URISyntaxException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+// snippet-start:[transcribe.java-streaming-retry-app]
+@SpringBootApplication
+public class TranscribeStreamingTwoFilesMain implements CommandLineRunner, ApplicationContextAware {
+    private static final Logger LOG = LoggerFactory.getLogger(TranscribeStreamingTwoFilesMain.class);
+    @Value("${region}")
+    private static final Region region = Region.AP_SOUTH_1;
+    @Autowired
+    private StreamTranscriber streamTranscriber;
+
+    @Value("${file.stream.sampleRate}")
+    private static final int sample_rate = 28800;
+
+    @Bean
+    public TranscribeStreamingAsyncClient getStreamingClient(){
+        return TranscribeStreamingAsyncClient.builder()
+                .region(region)
+                .build();
+    }
+
+    @Bean(name = "transcriptionExecutorService")
+    @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+    public ExecutorService getExecutorService(){
+        return Executors.newSingleThreadExecutor();
+    }
+
+    @Bean
+    public AWSCredentialsProvider credentialsProvider(){
+        return DefaultAWSCredentialsProviderChain.getInstance();
+    }
+
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+    }
+    private ApplicationContext applicationContext;
+
+
+
+    @Override
+    public void run(String... args) throws Exception {
+        LOG.info("EXECUTING : command line runner");
+        final String FILE2 =  "src/test/resources/speech_ai.wav";
+        final String FILE1 = "src/test/resources/speech_nature.wav";
+
+        InputStream streamOne=TranscribeHelper.getStreamFromFile(FILE1);
+        InputStream streamTwo=TranscribeHelper.getStreamFromFile(FILE2);
+
+        ByteToAudioEventSubscription.StreamReader streamReader=new ByteToAudioEventSubscription.StreamReader() {
+            final InterleaveInputStream stream=new InterleaveInputStream(streamOne,streamTwo);
+            boolean stopped=false;
+            @Override
+            public int read(byte[] b) throws IOException {
+                if(!stopped){
+                    return stream.read(b);
+                }else{
+                    return -1;
+                }
+
+            }
+
+            @Override
+            public StartStreamTranscriptionRequest getTranscriptionRequest() {
+                return StartStreamTranscriptionRequest.builder()
+                        .languageCode(LanguageCode.EN_US.toString())
+                        .mediaEncoding(MediaEncoding.PCM)
+                        .mediaSampleRateHertz(sample_rate)
+                        .enableChannelIdentification(true)
+                        .numberOfChannels(2)
+                        .showSpeakerLabel(Boolean.TRUE)
+                        .build();
+            }
+
+            @Override
+            public void close() {
+                try{
+                    stopped=true;
+                    stream.close();
+                }catch (Exception e){e.printStackTrace();}
+            }
+            @Override
+            public String label(){
+                return "twoFile";
+            }
+
+        };
+        CompletableFuture<Void> result= streamTranscriber.transcribe(streamReader);
+        /**
+         * Synchronous wait for stream to close, and close client connection
+         */
+        result.get();
+
+    }
+
+
+    public static void main(String args[]) throws URISyntaxException, ExecutionException, InterruptedException,
+            LineUnavailableException, FileNotFoundException {
+        LOG.info("STARTING THE APPLICATION");
+        SpringApplication.run(TranscribeStreamingTwoFilesMain.class, args);
+        LOG.info("APPLICATION FINISHED");
+    }
+
+}

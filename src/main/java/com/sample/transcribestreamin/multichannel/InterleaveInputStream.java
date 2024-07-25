@@ -4,12 +4,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class InterleaveStream extends InputStream {
+public class InterleaveInputStream extends InputStream {
     private final InputStream agentStream;
     private final InputStream callerStream;
     private static final int BLOCK_SIZE = 2; // Assuming 2 bytes per sample
 
-    public InterleaveStream(InputStream agentStream, InputStream callerStream) {
+    public InterleaveInputStream(InputStream agentStream, InputStream callerStream) {
         this.agentStream = agentStream;
         this.callerStream = callerStream;
     }
@@ -29,9 +29,17 @@ public class InterleaveStream extends InputStream {
         return combinedStream.size();
     }
 
+
+    private int read(InputStream stream, byte[] buffer) throws IOException {
+        if(stream!=null){
+            return stream.read(buffer);
+        }else {
+            return -1;
+        }
+    }
     private int read(byte[] agentBuffer, byte[] callerBuffer) throws IOException {
-        int agentBytesRead = agentStream.read(agentBuffer);
-        int callerBytesRead = callerStream.read(callerBuffer);
+        int agentBytesRead = read(agentStream,agentBuffer);
+        int callerBytesRead = read(callerStream,callerBuffer);
 
         if (agentBytesRead == -1 && callerBytesRead == -1) {
             return -1; // End of both streams
@@ -51,6 +59,12 @@ public class InterleaveStream extends InputStream {
     @Override
     public int read() throws IOException {
         throw new UnsupportedOperationException("read() is not supported");
+    }
+
+    @Override
+    public void close() throws IOException {
+        if(agentStream!=null) agentStream.close();
+        if(callerStream!=null) callerStream.close();
     }
 
     public static class FixedSizeByteArrayOutputStream extends ByteArrayOutputStream {

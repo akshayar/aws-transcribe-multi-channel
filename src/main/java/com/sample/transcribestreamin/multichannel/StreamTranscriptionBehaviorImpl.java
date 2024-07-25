@@ -3,6 +3,8 @@
 
 package com.sample.transcribestreamin.multichannel;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.transcribestreaming.model.*;
 
 import java.util.List;
@@ -12,10 +14,23 @@ import java.util.stream.Stream;
 
 // snippet-start:[transcribe.java-streaming-client-behavior-imp]
 public class StreamTranscriptionBehaviorImpl implements StreamTranscriptionBehavior {
+    private static final Logger LOG = LoggerFactory.getLogger(StreamTranscriptionBehaviorImpl.class);
+    private final String label;
     StringBuffer finalResult = new StringBuffer();
+
+    public StreamTranscriptionBehaviorImpl(String label) {
+        this.label = label;
+    }
+    private String addLabel(String in){
+        return "<<"+label+">>  : "+in;
+    }
+
+    private void print(String str){
+        LOG.info(addLabel(str));
+    }
     @Override
     public void onError(Throwable e) {
-        System.out.println("=== Failure encountered ===");
+        print("=== Failure encountered ===");
         e.printStackTrace();
     }
 
@@ -36,7 +51,7 @@ public class StreamTranscriptionBehaviorImpl implements StreamTranscriptionBehav
                 if(!a.transcript().isEmpty()){
 //                    System.out.println();
 //                    System.out.println("<<"+channel+">>  : "+ a.transcript());
-                    System.out.println("<<"+channel+">>  : "+ getSpeakerLabels(a.items().stream()));
+                    print("<<"+channel+">>  : "+ getSpeakerLabels(a.items().stream()));
                     finalResult.append(" ").append(a.transcript());
                 }
             });
@@ -59,13 +74,13 @@ public class StreamTranscriptionBehaviorImpl implements StreamTranscriptionBehav
 
     @Override
     public void onResponse(StartStreamTranscriptionResponse r) {
-        System.out.println(String.format("=== Received initial response. Request Id: %s ===", r.requestId()));
+        print(String.format("=== Received initial response. Request Id: %s ===", r.requestId()));
     }
 
     @Override
     public void onComplete() {
-        System.out.println(finalResult);
-        System.out.println("=== All records streamed successfully ===");
+        print(finalResult+"");
+        print("=== All records streamed successfully ===");
     }
 }
 // snippet-end:[transcribe.java-streaming-client-behavior-imp]

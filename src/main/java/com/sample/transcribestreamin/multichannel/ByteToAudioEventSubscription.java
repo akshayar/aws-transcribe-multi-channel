@@ -19,15 +19,17 @@ package com.sample.transcribestreamin.multichannel;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.transcribestreaming.model.AudioEvent;
 import software.amazon.awssdk.services.transcribestreaming.model.AudioStream;
+import software.amazon.awssdk.services.transcribestreaming.model.StartStreamTranscriptionRequest;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This is an example Subscription implementation that converts bytes read from an AudioStream into AudioEvents
@@ -38,14 +40,15 @@ import java.util.concurrent.atomic.AtomicLong;
  * https://github.com/reactive-streams/reactive-streams-jvm/blob/v1.0.2/README.md
  */
 public class ByteToAudioEventSubscription implements Subscription {
+    private static final Logger LOG = LoggerFactory.getLogger(ByteToAudioEventSubscription.class);
     private final int chunkSizeInBytes;
     private final ExecutorService executor ;
     private final Subscriber<? super AudioStream> subscriber;
-    private final AtomicLong demand = new AtomicLong(0);
     private final StreamReader streamReader;
 
 
     public ByteToAudioEventSubscription(Subscriber<? super AudioStream> s, ExecutorService executor, int chunkSizeInBytes, StreamReader streamReader) {
+        LOG.info("Creating ByteToAudioEventSubscription :{}",streamReader.label());
         this.subscriber = s;
         this.executor=executor;
         this.chunkSizeInBytes=chunkSizeInBytes;
@@ -58,11 +61,18 @@ public class ByteToAudioEventSubscription implements Subscription {
             subscriber.onError(new IllegalArgumentException("Demand must be positive"));
         }
 
-        demand.getAndAdd(n);
         //We need to invoke this in a separate thread because the call to subscriber.onNext(...) is recursive
-        executor.submit(() -> {
+        try{
+            executor.submit(()->{this.sendNEvents(n);});
+        }catch (Exception e){
+            LOG.error("Exception while submitting task to executor :{}",streamReader.label(),e);
+        }
+
+    }
+
+    private synchronized void sendNEvents(long n) {
+        for(long index=0 ; index < n ; index++){
             try {
-                do {
                     ByteBuffer audioBuffer = getNextEvent();
                     if (audioBuffer.remaining() > 0) {
                         AudioEvent audioEvent = audioEventFromBuffer(audioBuffer);
@@ -71,12 +81,12 @@ public class ByteToAudioEventSubscription implements Subscription {
                         subscriber.onComplete();
                         break;
                     }
-                } while (demand.decrementAndGet() > 0);
             } catch (Exception e) {
-                e.printStackTrace();
+                LOG.error("Exception while reading and sending event:{}",streamReader.label(),e);
                 subscriber.onError(e);
             }
-        });
+
+        }
     }
 
     @Override
@@ -111,6 +121,13 @@ public class ByteToAudioEventSubscription implements Subscription {
 
     public static interface StreamReader {
         int read(byte[] b) throws IOException;
+
+        StartStreamTranscriptionRequest getTranscriptionRequest();
+
+        void close() ;
+
+        String label();
+
     }
 
 }

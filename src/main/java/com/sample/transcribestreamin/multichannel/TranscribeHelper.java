@@ -1,8 +1,5 @@
 package com.sample.transcribestreamin.multichannel;
 
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.transcribestreaming.TranscribeStreamingAsyncClient;
-
 import javax.sound.sampled.*;
 import java.io.File;
 import java.io.FileInputStream;
@@ -41,11 +38,5 @@ public class TranscribeHelper {
         return getStreamFromFile(new File(audioFile));
     }
 
-    public static TranscribeStreamingAsyncClient getTranscriptionClient(Region region) {
-        return TranscribeStreamingAsyncClient.builder()
-                .region(region)
-                .build();
-
-    }
 
 }

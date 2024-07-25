@@ -20,7 +20,10 @@ package com.sample.transcribestreamin.multichannel;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
@@ -36,19 +39,21 @@ import java.util.concurrent.ExecutorService;
 @Component
 @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class AudioStreamPublisher implements Publisher<AudioStream> {
+    private static final Logger LOG = LoggerFactory.getLogger(AudioStreamPublisher.class);
     @Value("${chunkSizeInBytes:1024}")
     private int chunkSizeInBytes = 1024;
     @Autowired
+    @Qualifier("transcriptionExecutorService")
     private ExecutorService executor ;
     private ByteToAudioEventSubscription.StreamReader streamReader;
 
-    public AudioStreamPublisher(){}
-    public AudioStreamPublisher(ByteToAudioEventSubscription.StreamReader reader) {
-        this.streamReader=reader;
+    public AudioStreamPublisher(){
+        LOG.info("Creating publisher");
     }
 
     @Override
     public void subscribe(Subscriber<? super AudioStream> s) {
+        LOG.info("Subscribing :{},{}",streamReader.label(),s);
         Subscription subscription=new ByteToAudioEventSubscription(s,executor,chunkSizeInBytes, streamReader);
         s.onSubscribe(subscription);
     }

@@ -5,11 +5,10 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public class AudioStreamInterleaverTest {
-    private static final int BLOCK_SIZE = 2; // Assuming 2 bytes per sample
-    InterleaveStream interleaveStream ;
+    InterleaveInputStream interleaveStream ;
 
     public AudioStreamInterleaverTest(InputStream agentStream, InputStream callerStream){
-        interleaveStream=new InterleaveStream(agentStream, callerStream);
+        interleaveStream=new InterleaveInputStream(agentStream, callerStream);
     }
 
     public static void main(String[] args) throws IOException {
@@ -20,7 +19,7 @@ public class AudioStreamInterleaverTest {
 
         ByteArrayInputStream agentStream = new ByteArrayInputStream(agentData);
         ByteArrayInputStream callerStream = new ByteArrayInputStream(callerData);
-        InterleaveStream interleaveStream=new InterleaveStream(agentStream,callerStream);
+        InterleaveInputStream interleaveStream=new InterleaveInputStream(agentStream,callerStream);
         while (interleaveStream.read(out) >0){
             System.out.println(java.util.Arrays.toString(out)); // Output: [1, 5, 2, 6, 3, 7, 4, 8]
             out = new byte[4];

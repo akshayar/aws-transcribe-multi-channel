@@ -18,6 +18,8 @@
 package com.sample.transcribestreamin.multichannel;
 
 import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -39,6 +41,7 @@ import java.util.concurrent.CompletableFuture;
  */
 @Component
 public class TranscribeStreamingRetryClient {
+    private static final Logger LOG = LoggerFactory.getLogger(TranscribeStreamingRetryClient.class);
 
     private static final int DEFAULT_MAX_RETRIES = 10;
     private static final int DEFAULT_MAX_SLEEP_TIME_MILLS = 100;
@@ -133,7 +136,7 @@ public class TranscribeStreamingRetryClient {
             if (e != null) {
 
                 if (retryAttempt <= maxRetries && isExceptionRetriable(e)) {
-                    System.out.println("Retry attempt:" + (retryAttempt+1) );
+                    LOG.info("Retry attempt:" + (retryAttempt+1) );
 
                     try {
                         Thread.sleep(sleepTime);
