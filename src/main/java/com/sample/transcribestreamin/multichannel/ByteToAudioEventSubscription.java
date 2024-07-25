@@ -63,7 +63,7 @@ public class ByteToAudioEventSubscription implements Subscription {
 
         //We need to invoke this in a separate thread because the call to subscriber.onNext(...) is recursive
         try{
-            executor.submit(()->{this.sendNEvents(n);});
+            executor.submit(()-> this.sendNEvents(n));
         }catch (Exception e){
             LOG.error("Exception while submitting task to executor :{}",streamReader.label(),e);
         }
@@ -119,7 +119,7 @@ public class ByteToAudioEventSubscription implements Subscription {
                 .build();
     }
 
-    public static interface StreamReader {
+    public interface StreamReader {
         int read(byte[] b) throws IOException;
 
         StartStreamTranscriptionRequest getTranscriptionRequest();

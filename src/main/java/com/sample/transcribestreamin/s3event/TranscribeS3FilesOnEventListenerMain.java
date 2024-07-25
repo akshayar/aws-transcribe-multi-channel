@@ -50,7 +50,7 @@ public class TranscribeS3FilesOnEventListenerMain {
     @Qualifier("s3SqsClient")
     private SqsClient sqsClient;
 
-    private Gson gson = new Gson();
+    private final Gson gson = new Gson();
 
     @Autowired
     StreamTranscriber streamTranscriber;
@@ -148,7 +148,7 @@ public class TranscribeS3FilesOnEventListenerMain {
             copyToFile(bucketName, transcribeDetail.objectKey1);
             copyToFile(bucketName, transcribeDetail.objectKey2);
             transcribeDetail.reader=new S3FileTranscribeUpdatableReader(new FileInputStream(transcribeDetail.objectKey1),new FileInputStream(transcribeDetail.objectKey2));
-            StartStreamTranscriptionRequest request = StartStreamTranscriptionRequest.builder()
+            transcribeDetail.reader.startStreamTranscriptionRequest=StartStreamTranscriptionRequest.builder()
                     .languageCode(LanguageCode.EN_US.toString())
                     .mediaEncoding(MediaEncoding.PCM)
                     .mediaSampleRateHertz(sample_rate)
@@ -156,8 +156,7 @@ public class TranscribeS3FilesOnEventListenerMain {
                     .numberOfChannels(2)
                     .showSpeakerLabel(Boolean.TRUE)
                     .build();
-            transcribeDetail.reader.startStreamTranscriptionRequest=request;
-            transcribeDetail.reader.label=parentPath+"";
+            transcribeDetail.reader.label= String.valueOf(parentPath);
             transcribeDetail.result=streamTranscriber.transcribe(transcribeDetail.reader);
 
             transcribeDetail.result.whenComplete((result, exception)->{
@@ -186,9 +185,9 @@ public class TranscribeS3FilesOnEventListenerMain {
         FileUtils.copyToFile(s3Object1.getObjectContent(),file);
         s3Object1.close();
     }
-    private boolean deleteFile(String objectKey) {
+    private void deleteFile(String objectKey) {
         File file=new File(objectKey);
-        return file.delete();
+        file.delete();
     }
 
     public static class S3FileTranscribeUpdatableReader implements ByteToAudioEventSubscription.StreamReader{

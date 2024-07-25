@@ -120,16 +120,12 @@ public class TranscribeStreamingTwoFilesMain implements CommandLineRunner, Appli
 
         };
         CompletableFuture<Void> result= streamTranscriber.transcribe(streamReader);
-        /**
-         * Synchronous wait for stream to close, and close client connection
-         */
         result.get();
 
     }
 
 
-    public static void main(String args[]) throws URISyntaxException, ExecutionException, InterruptedException,
-            LineUnavailableException, FileNotFoundException {
+    public static void main(String[] args)  {
         LOG.info("STARTING THE APPLICATION");
         SpringApplication.run(TranscribeStreamingTwoFilesMain.class, args);
         LOG.info("APPLICATION FINISHED");

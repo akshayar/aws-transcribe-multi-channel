@@ -59,13 +59,13 @@ public class StreamTranscriptionBehaviorImpl implements StreamTranscriptionBehav
     }
 
     public String getSpeakerLabels(Stream<Item> stream){
-        return ""+stream.collect(Collectors.groupingBy(
+        return String.valueOf(stream.collect(Collectors.groupingBy(
                 this::speaker,
                 Collectors.mapping(
                         Item::content,
                         Collectors.joining(" ", " ", " ")
                 )
-        ));
+        )));
     }
     public  String speaker(Item item){
         return "speaker_"+item.speaker();
@@ -79,7 +79,7 @@ public class StreamTranscriptionBehaviorImpl implements StreamTranscriptionBehav
 
     @Override
     public void onComplete() {
-        print(finalResult+"");
+        print(String.valueOf(finalResult));
         print("=== All records streamed successfully ===");
     }
 }
