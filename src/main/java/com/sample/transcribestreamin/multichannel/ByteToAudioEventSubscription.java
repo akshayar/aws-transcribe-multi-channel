@@ -70,6 +70,14 @@ public class ByteToAudioEventSubscription implements Subscription {
 
     }
 
+    /**
+     * Refer https://github.com/reactive-streams/reactive-streams-jvm/blob/v1.0.2/README.md
+     * onSubscribe, onNext, onError and onComplete signaled to a Subscriber MUST be signaled in a thread-safe manner—and
+     * if performed by multiple threads—use external synchronization.
+     * The intent of this rule is to make it clear that external synchronization must be employed if the Publisher
+     * intends to send signals from multiple/different threads.
+     * @param n
+     */
     private synchronized void sendNEvents(long n) {
         for (long index = 0; index < n; index++) {
             try {
