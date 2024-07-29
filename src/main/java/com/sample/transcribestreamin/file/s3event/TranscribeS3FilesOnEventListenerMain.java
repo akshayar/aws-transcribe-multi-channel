@@ -1,6 +1,5 @@
-package com.sample.transcribestreamin.s3event;
+package com.sample.transcribestreamin.file.s3event;
 
-import ch.qos.logback.core.util.FileUtil;
 import com.google.gson.Gson;
 import com.sample.transcribestreamin.multichannel.ByteToAudioEventSubscription;
 import com.sample.transcribestreamin.multichannel.InterleaveInputStream;
@@ -10,10 +9,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Scope;
 import org.springframework.util.FileCopyUtils;
-import org.springframework.util.FileSystemUtils;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.eventnotifications.s3.model.S3EventNotification;
 import software.amazon.awssdk.eventnotifications.s3.model.S3EventNotificationRecord;
@@ -25,6 +27,7 @@ import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
 import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
+import software.amazon.awssdk.services.transcribestreaming.TranscribeStreamingAsyncClient;
 import software.amazon.awssdk.services.transcribestreaming.model.LanguageCode;
 import software.amazon.awssdk.services.transcribestreaming.model.MediaEncoding;
 import software.amazon.awssdk.services.transcribestreaming.model.StartStreamTranscriptionRequest;
@@ -34,18 +37,14 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.CopyOption;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.*;
 
-@SpringBootApplication(scanBasePackages = "com.sample.transcribestreamin")
+@SpringBootApplication(scanBasePackages = "com.sample.transcribestreamin.multichannel,com.sample.transcribestreamin.file.s3event")
 public class TranscribeS3FilesOnEventListenerMain {
     private static final Logger logger = LoggerFactory.getLogger(TranscribeS3FilesOnEventListenerMain.class);
     @Value("${file.stream.sampleRate}")
@@ -56,18 +55,18 @@ public class TranscribeS3FilesOnEventListenerMain {
     @Autowired
     S3Client amazonS3;
     ConcurrentHashMap<String, TranscribeDetail> transcribeDetailConcurrentHashMap = new ConcurrentHashMap<>();
-    @Value("${region:ap-south-1}")
+    @Value("${s3.region:ap-south-1}")
     private Region region;
     @Autowired
     @Qualifier("s3SqsClient")
     private SqsClient sqsClient;
     @Value("${s3.sqsQueueUrl}")
     private String sqsQueueUrl;
-    @Value("${event.listener.type}")
-    private String eventListenerType;
 
     public static void main(String[] args) {
+        logger.info("STARTING THE APPLICATION");
         org.springframework.boot.SpringApplication.run(TranscribeS3FilesOnEventListenerMain.class, args);
+        logger.info("FINISHED THE APPLICATION");
     }
 
     @Bean("s3SqsClient")
@@ -81,10 +80,27 @@ public class TranscribeS3FilesOnEventListenerMain {
     public S3Client amazonS3() {
         return S3Client.builder().region(region).build();
     }
+    @Bean
+    public TranscribeStreamingAsyncClient getStreamingClient() {
+        return TranscribeStreamingAsyncClient.builder()
+                .region(region)
+                .build();
+    }
+
+    @Bean(name = "transcriptionExecutorService")
+    @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+    public ExecutorService getExecutorService() {
+        return Executors.newSingleThreadExecutor();
+    }
+
+    @Bean
+    public AwsCredentialsProvider credentialsProvider() {
+        return DefaultCredentialsProvider.builder().build();
+    }
 
     @PostConstruct
     public void init() {
-        while ("s3".equalsIgnoreCase(eventListenerType)) {
+        while(true){
             pollMessages();
             try {
                 Thread.sleep(1000);
@@ -160,6 +176,7 @@ public class TranscribeS3FilesOnEventListenerMain {
                     .build();
             transcribeDetail.reader.label = String.valueOf(parentPath);
             transcribeDetail.result = streamTranscriber.transcribe(transcribeDetail.reader);
+            logger.info("Transcription started for: " + parentPath);
 
             transcribeDetail.result.whenComplete((result, exception) -> {
                 if (exception != null) {

@@ -83,6 +83,11 @@
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>amazon-kinesis-video-streams-parser-library</artifactId>
+            <version>1.2.5</version>
+        </dependency>
 
     </dependencies>
 

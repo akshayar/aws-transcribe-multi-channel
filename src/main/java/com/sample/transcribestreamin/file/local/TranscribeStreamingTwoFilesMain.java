@@ -1,8 +1,12 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package com.sample.transcribestreamin.multichannel;
+package com.sample.transcribestreamin.file.local;
 
+import com.sample.transcribestreamin.multichannel.ByteToAudioEventSubscription;
+import com.sample.transcribestreamin.multichannel.InterleaveInputStream;
+import com.sample.transcribestreamin.multichannel.StreamTranscriber;
+import com.sample.transcribestreamin.multichannel.TranscribeHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +35,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 // snippet-start:[transcribe.java-streaming-retry-app]
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.sample.transcribestreamin.multichannel,com.sample.transcribestreamin.file.local")
 public class TranscribeStreamingTwoFilesMain implements CommandLineRunner, ApplicationContextAware {
     private static final Logger LOG = LoggerFactory.getLogger(TranscribeStreamingTwoFilesMain.class);
     @Value("${region}")
